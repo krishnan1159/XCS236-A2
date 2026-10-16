@@ -48,11 +48,34 @@ class VAE(nn.Module):
         #   nelbo, kl, rec
         ################################################################################
         ### START CODE HERE ###
+
+        # We are using encoder network to get the mean and variance for all the latent variables
+        # self.enc(x) will return m, v which is mean and variance for all the latent variables.
+        # x - > (Batch, rasterized_pixels)
+
+        # This encoder forward pass constructs q(z | x ; phi)
+        m, v = self.enc(x)
+
+        # We need to do re-parameterization trick to construct g vector which is passed as input to
+        # the decoder network. 
+        z = ut.sample_gaussian(m, v)
+
+        # Pass z to the decoder to get p(x | z ; theta)
+        logits = self.dec(z)
+
+        # Re-construction loss, 
+        rec = -ut.log_bernoulli_with_logits(x, logits)
+        kl = ut.kl_normal(m, v, torch.zeros_like(m), torch.ones_like(v))
+        nelbo = kl + rec
+
+        #print(f"Batch : NELBO = {nelbo.shape}, {torch.mean(nelbo)}, KL = {torch.mean(kl)}, rec = {torch.mean(rec)}")
+
+        return torch.mean(nelbo), torch.mean(kl), torch.mean(rec)
+
         ### END CODE HERE ###
         ################################################################################
         # End of code modification
         ################################################################################
-        raise NotImplementedError
 
     def negative_iwae_bound(self, x, iw):
         """
